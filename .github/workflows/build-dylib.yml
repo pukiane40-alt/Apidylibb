@@ -11,7 +11,7 @@ on:
       bundle_id:
         description: 'Target game bundle ID'
         required: true
-        default: 'com.supercell.brawlstars'
+        default: 'com.dts.freefireth'
         type: string
 
 jobs:
