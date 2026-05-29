@@ -1,0 +1,113 @@
+name: Build ZombiMod Dylib
+
+on:
+  workflow_dispatch:
+    inputs:
+      license_key:
+        description: 'License key (e.g. ZOMBI-DAY-A1B2C3D4E5F67890)'
+        required: true
+        default: 'ZOMBI-DAY-REPLACEME'
+        type: string
+      bundle_id:
+        description: 'Target game bundle ID'
+        required: true
+        default: 'com.supercell.brawlstars'
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            build-essential clang curl git \
+            dpkg-dev fakeroot perl \
+            libxml-parser-perl xz-utils unzip
+
+      - name: Install ldid
+        run: |
+          sudo curl -fsSL -o /usr/local/bin/ldid \
+            https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_linux_x86_64
+          sudo chmod +x /usr/local/bin/ldid
+          echo "ldid version check:"
+          ldid 2>&1 | head -1 || true
+
+      - name: Install Theos
+        run: |
+          sudo git clone --recursive --depth=1 \
+            https://github.com/theos/theos.git /opt/theos
+          sudo chmod -R 777 /opt/theos
+          echo "THEOS=/opt/theos" >> $GITHUB_ENV
+          echo "/opt/theos/bin" >> $GITHUB_PATH
+          echo "Theos installed at /opt/theos"
+
+      - name: Download iOS 16.5 SDK
+        run: |
+          curl -fsSL -o /tmp/sdk.tar.xz \
+            "https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz"
+          sudo tar -xf /tmp/sdk.tar.xz -C /opt/theos/sdks/
+          echo "SDKs available:"
+          ls /opt/theos/sdks/
+
+      - name: Inject build variables
+        run: |
+          sed -i "s|#define ZM_LICENSE_KEY @\".*\"|#define ZM_LICENSE_KEY @\"${{ github.event.inputs.license_key }}\"|" ZMLicenseManager.m
+          sed -i "s|^export BUNDLE_FILTER.*|export BUNDLE_FILTER = ${{ github.event.inputs.bundle_id }}|" Makefile
+          echo "=== Verification ==="
+          grep "ZM_LICENSE_KEY\|ZM_API_BASE" ZMLicenseManager.m
+          grep "BUNDLE_FILTER" Makefile
+
+      - name: Build dylib
+        run: |
+          make clean
+          make package FINALPACKAGE=1
+        env:
+          THEOS: /opt/theos
+          ARCHS: arm64
+          TARGET: iphone:clang:16.5:14.0
+
+      - name: Find outputs
+        id: find
+        run: |
+          echo "=== Built files ==="
+          find .theos packages -name "*.dylib" -o -name "*.deb" 2>/dev/null || true
+          DYLIB=$(find .theos/obj -name "*.dylib" 2>/dev/null | head -1)
+          DEB=$(find packages -name "*.deb" 2>/dev/null | head -1)
+          echo "dylib=$DYLIB" >> $GITHUB_OUTPUT
+          echo "deb=$DEB" >> $GITHUB_OUTPUT
+          echo "Dylib: $DYLIB"
+          echo "Deb:   $DEB"
+
+      - name: Upload dylib
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZombiMod-dylib-${{ github.run_number }}
+          path: ${{ steps.find.outputs.dylib }}
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Upload deb
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZombiMod-deb-${{ github.run_number }}
+          path: ${{ steps.find.outputs.deb }}
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          echo "## ✅ ZombiMod Build #${{ github.run_number }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Key | \`${{ github.event.inputs.license_key }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Target | \`${{ github.event.inputs.bundle_id }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| API | \`https://dynamic-link-library--nelinelikd.replit.app/api\` |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "⬇️ Download **.dylib** from the Artifacts section above." >> $GITHUB_STEP_SUMMARY
