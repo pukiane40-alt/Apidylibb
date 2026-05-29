@@ -1,0 +1,9 @@
+Package: com.serfcn.zombimod
+Name: Zombi Mod
+Depends: mobilesubstrate
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: Zombi Mod - SERFCN Licensed Tweak
+Maintainer: SERFCN
+Author: SERFCN
+Section: Tweaks
