@@ -26,35 +26,15 @@ jobs:
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq \
-            build-essential clang curl git \
-            dpkg-dev fakeroot perl \
-            libxml-parser-perl xz-utils unzip
+            build-essential curl git dpkg-dev fakeroot \
+            perl libxml-parser-perl xz-utils
 
-      - name: Install ldid
-        run: |
-          sudo curl -fsSL -o /usr/local/bin/ldid \
-            https://github.com/ProcursusTeam/ldid/releases/download/v2.1.5-procursus7/ldid_linux_x86_64
-          sudo chmod +x /usr/local/bin/ldid
-          echo "ldid version check:"
-          ldid 2>&1 | head -1 || true
-
-      - name: Install Theos
-        run: |
-          sudo git clone --recursive \
-            https://github.com/theos/theos.git /opt/theos
-          sudo chmod -R 777 /opt/theos
-          echo "THEOS=/opt/theos" >> $GITHUB_ENV
-          echo "/opt/theos/bin" >> $GITHUB_PATH
-          echo "Toolchain check:"
-          ls /opt/theos/toolchain/linux/iphone/bin/ | head -5 || echo "No toolchain"
-
-      - name: Download iOS 16.5 SDK
-        run: |
-          curl -fsSL -o /tmp/sdk.tar.xz \
-            "https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz"
-          sudo tar -xf /tmp/sdk.tar.xz -C /opt/theos/sdks/
-          echo "SDKs:"
-          ls /opt/theos/sdks/
+      - name: Setup Theos
+        uses: kabiroberai/theos-action@v1
+        with:
+          cache: true
+          cache-dir: /opt/theos
+          sdks: "https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz"
 
       - name: Inject build variables
         run: |
@@ -69,7 +49,6 @@ jobs:
           make clean
           make package FINALPACKAGE=1
         env:
-          THEOS: /opt/theos
           ARCHS: arm64
           TARGET: iphone:clang:16.5:14.0
 
