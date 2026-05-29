@@ -16,30 +16,34 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: macos-latest
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install dependencies
+      - name: Install Theos dependencies
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq \
-            build-essential curl git dpkg-dev fakeroot \
-            perl libxml-parser-perl xz-utils
+          brew install ldid dpkg xz
 
-      - name: Setup Theos
-        uses: kabiroberai/theos-action@v1
-        with:
-          cache: true
-          cache-dir: /opt/theos
-          sdks: "https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz"
+      - name: Install Theos
+        run: |
+          export THEOS=~/theos
+          git clone --recursive https://github.com/theos/theos.git $THEOS
+          echo "THEOS=$THEOS" >> $GITHUB_ENV
+          echo "$THEOS/bin" >> $GITHUB_PATH
+
+      - name: Download iOS 16.5 SDK
+        run: |
+          curl -fsSL -o /tmp/sdk.tar.xz \
+            "https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz"
+          tar -xf /tmp/sdk.tar.xz -C $THEOS/sdks/
+          echo "SDKs: $(ls $THEOS/sdks/)"
 
       - name: Inject build variables
         run: |
-          sed -i "s|#define ZM_LICENSE_KEY @\".*\"|#define ZM_LICENSE_KEY @\"${{ github.event.inputs.license_key }}\"|" ZMLicenseManager.m
-          sed -i "s|^export BUNDLE_FILTER.*|export BUNDLE_FILTER = ${{ github.event.inputs.bundle_id }}|" Makefile
+          sed -i '' "s|#define ZM_LICENSE_KEY @\".*\"|#define ZM_LICENSE_KEY @\"${{ github.event.inputs.license_key }}\"|" ZMLicenseManager.m
+          sed -i '' "s|^export BUNDLE_FILTER.*|export BUNDLE_FILTER = ${{ github.event.inputs.bundle_id }}|" Makefile
           echo "=== Verification ==="
           grep "ZM_LICENSE_KEY\|ZM_API_BASE" ZMLicenseManager.m
           grep "BUNDLE_FILTER" Makefile
