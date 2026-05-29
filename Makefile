@@ -11,6 +11,6 @@ ZombiMod_FRAMEWORKS = UIKit Foundation CoreGraphics QuartzCore
 ZombiMod_PRIVATE_FRAMEWORKS =
 ZombiMod_LIBRARIES =
 
-export BUNDLE_FILTER = com.supercell.brawlstars
+export BUNDLE_FILTER = com.dts.freefireth
 
 include $(THEOS)/makefiles/tweak.mk
