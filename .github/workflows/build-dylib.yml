@@ -44,9 +44,11 @@ jobs:
         run: |
           sed -i '' "s|#define ZM_LICENSE_KEY @\".*\"|#define ZM_LICENSE_KEY @\"${{ github.event.inputs.license_key }}\"|" ZMLicenseManager.m
           sed -i '' "s|^export BUNDLE_FILTER.*|export BUNDLE_FILTER = ${{ github.event.inputs.bundle_id }}|" Makefile
+          sed -i '' "s|<string>com.dts.freefireth</string>|<string>${{ github.event.inputs.bundle_id }}</string>|" ZombiMod.plist
           echo "=== Verification ==="
           grep "ZM_LICENSE_KEY\|ZM_API_BASE" ZMLicenseManager.m
           grep "BUNDLE_FILTER" Makefile
+          grep "string" ZombiMod.plist
 
       - name: Build dylib
         run: |
