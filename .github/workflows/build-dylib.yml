@@ -40,19 +40,20 @@ jobs:
 
       - name: Install Theos
         run: |
-          sudo git clone --recursive --depth=1 \
+          sudo git clone --recursive \
             https://github.com/theos/theos.git /opt/theos
           sudo chmod -R 777 /opt/theos
           echo "THEOS=/opt/theos" >> $GITHUB_ENV
           echo "/opt/theos/bin" >> $GITHUB_PATH
-          echo "Theos installed at /opt/theos"
+          echo "Toolchain check:"
+          ls /opt/theos/toolchain/linux/iphone/bin/ | head -5 || echo "No toolchain"
 
       - name: Download iOS 16.5 SDK
         run: |
           curl -fsSL -o /tmp/sdk.tar.xz \
             "https://github.com/theos/sdks/releases/download/master-146e41f/iPhoneOS16.5.sdk.tar.xz"
           sudo tar -xf /tmp/sdk.tar.xz -C /opt/theos/sdks/
-          echo "SDKs available:"
+          echo "SDKs:"
           ls /opt/theos/sdks/
 
       - name: Inject build variables
